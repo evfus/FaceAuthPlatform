@@ -3,11 +3,11 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import generate_client_id, generate_client_secret, hash_secret
 from app.models.application import Application
-from app.schemas.application import ApplicationCreate, ApplicationCreateResponse
+from app.schemas.application import ApplicationCreate, ApplicationCreateResponse, ApplicationResponse
 
-router = APIRouter()
+router = APIRouter(prefix = "/applications")
 
-@router.post("/applications", response_model = ApplicationCreateResponse)
+@router.post("/", response_model = ApplicationCreateResponse, status_code = 201)
 def create_application(payload: ApplicationCreate, db: Session = Depends(get_db)):
     raw_secret = generate_client_secret()
 
@@ -30,3 +30,7 @@ def create_application(payload: ApplicationCreate, db: Session = Depends(get_db)
         created_at = db_app.created_at,
         client_secret = raw_secret
     )
+
+@router.get("/", response_model = list[ApplicationResponse])
+def list_applications(db: Session = Depends(get_db)):
+    return db.query(Application).all()
