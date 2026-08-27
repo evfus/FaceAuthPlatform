@@ -17,3 +17,6 @@ def verify_secret(raw_secret: str, hash_secret: str) -> bool:
 
 def generate_auth_code() -> str:
     return secrets.token_urlsafe(32)
+
+def generate_token() ->str:
+    return secrets.token_urlsafe(32)

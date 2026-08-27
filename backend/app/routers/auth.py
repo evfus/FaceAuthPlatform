@@ -1,9 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone, timedelta
 from app.core.database import get_db
-from app.core.security import generate_auth_code
+from app.core.security import generate_auth_code, verify_secret, generate_token
+from app.schemas.token import TokenRequest, TokenResponse
+from app.models.token import Token
 from app.models.application import Application
 from app.models.user import User
 from app.models.auth_code import AuthCode
@@ -37,3 +39,45 @@ def authorize(client_id: str = Query(...), redirect_url: str = Query(...), user_
     db.commit()
 
     return RedirectResponse(url = f"{redirect_url}?code={code}")
+
+@router.post("/token", response_model = TokenResponse)
+def exchange_token(request: TokenRequest, db: Session = Depends(get_db)):
+    auth_code = db.query(AuthCode).filter(AuthCode.code == request.code).first()
+
+    if not auth_code:
+        raise HTTPException(status_code = 400, detail = "Invalid code")
+
+    if auth_code.used:
+        raise HTTPException(status_code = 400, detail = "Code already used")
+
+    if auth_code.expires_at < datetime.now(timezone.utc).replace(tzinfo = None):
+        raise HTTPException(status_code = 400, detail = "Code expired")
+
+    application = db.query(Application).filter(Application.client_id == request.client_id).first()
+
+    if not application:
+        raise HTTPException(status_code = 400, detail = "Invalid client_id")
+
+    if not verify_secret(request.client_secret, application.client_secret_hash):
+        raise HTTPException(status_code = 400, detail = "Invalid client_secret")
+
+    if auth_code.application_id != application.id:
+        raise HTTPException(status_code = 400, detail = "Code does not belong to this application")
+
+    auth_code.used = True
+    
+    token_value = generate_token()
+
+    token = Token(
+        token = token_value,
+        user_id = auth_code.user_id,
+        application_id = application.id,
+        expires_at = datetime.now(timezone.utc) + timedelta(hours = 1)
+    )
+
+    db.add(token)
+    db.commit()
+
+    return TokenResponse(token = token_value, expires_at = token.expires_at)
+
+
