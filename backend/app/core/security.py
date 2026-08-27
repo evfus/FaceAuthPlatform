@@ -14,3 +14,6 @@ def hash_secret(raw_secret: str) -> str:
 
 def verify_secret(raw_secret: str, hash_secret: str) -> bool:
     return pwd_context.verify(raw_secret, hash_secret)
+
+def generate_auth_code() -> str:
+    return secrets.token_urlsafe(32)
