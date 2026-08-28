@@ -10,6 +10,7 @@ class DetectedFace:
     width: int
     height: int
     confidence: float
+    landmarks: np.ndarray
 
 class FaceDetector:
     def __init__(self):
@@ -33,6 +34,7 @@ class FaceDetector:
 
         for face in faces:
             x, y, width, height = face[0:4].astype(int)
+            landmarks = face[4:14].reshape(5, 2).astype(np.float32)
             confidence = face[:-1].astype(float)
 
             x = max(0, min(x, w))
@@ -48,7 +50,8 @@ class FaceDetector:
                 y = y,
                 width = x2 - x,
                 height = y2 - y,
-                confidence = confidence
+                confidence = confidence,
+                landmarks = landmarks
             ))
 
         return results
