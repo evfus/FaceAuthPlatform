@@ -8,6 +8,7 @@ class Settings(BaseSettings):
 
     face_detector_model: str = str(BASE_DIR / "ml_models" / "face_detection" / "face_detection_yunet.onnx")
     face_detector_confidence_threshold: float = 0.5
+    face_embedder_model: str = str(BASE_DIR / "ml_models" / "face_detection" / "face_recognition_sface.onnx")
 
     class Config:
         env_file = ".env"

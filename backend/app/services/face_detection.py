@@ -35,7 +35,7 @@ class FaceDetector:
         for face in faces:
             x, y, width, height = face[0:4].astype(int)
             landmarks = face[4:14].reshape(5, 2).astype(np.float32)
-            confidence = face[:-1].astype(float)
+            confidence = float(face[-1])
 
             x = max(0, min(x, w))
             y = max(0, min(y, h))
