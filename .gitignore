@@ -1,4 +1,5 @@
 backend/ml_models
+backend/scripts/detection_result.jpg
 
 *.db
 
