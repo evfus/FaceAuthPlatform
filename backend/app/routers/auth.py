@@ -1,23 +1,59 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from fastapi.responses import RedirectResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone, timedelta
 from app.core.database import get_db
-from app.core.security import generate_auth_code, verify_secret, generate_token, utcnow_naive
-from app.schemas.token import TokenRequest, TokenResponse
-from app.schemas.user import UserResponse
+from app.core.security import generate_auth_code, hash_secret, verify_secret, generate_token, utcnow_naive
+from app.schemas.token import TokenRequest, TokenResponse, AuthorizeRequest, AuthResult
+from app.schemas.user import UserRegister, UserResponse
 from app.models.token import Token
 from app.models.application import Application
 from app.models.user import User
 from app.models.auth_code import AuthCode
+from app.services.auth_flow import complete_login_or_signup
 
 router = APIRouter(prefix = "/auth", tags = ["auth"])
 
 security = HTTPBearer()
 
-@router.get("/authorize")
-def authorize(client_id: str = Query(...), redirect_url: str = Query(...), user_id: int = Query(...), db: Session = Depends(get_db)):
+@router.post("/register", response_model = AuthResult, status_code = 201)
+def register(
+    client_id: str = Query(...),
+    redirect_url: str = Query(...),
+    user_in: UserRegister = Body(...),
+    db: Session = Depends(get_db)
+):
+    application = db.query(Application).filter(Application.client_id == client_id).first()
+
+    if not application:
+        raise HTTPException(status_code = 400, detail = "Invalid client_id")
+    if application.redirect_url != redirect_url:
+        raise HTTPException(status_code = 400, detail = "redirect_url does not match registered value")
+
+    existing = db.query(User).filter(User.email == user_in.email).first()
+
+    if existing:
+        raise HTTPException(status_code = 409, detail = "User already exists with this email address")
+
+    user = User(
+        email = user_in.email,
+        password_hash = hash_secret(user_in.password)
+    )
+    
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    return complete_login_or_signup(user, application, db)
+
+@router.post("/authorize", response_model = AuthResult)
+def authorize(
+    client_id: str = Query(...),
+    redirect_url: str = Query(...),
+    credentials: AuthorizeRequest = Body(...),
+    db: Session = Depends(get_db)
+):
     application = db.query(Application).filter(Application.client_id == client_id).first()
 
     if not application:
@@ -26,23 +62,12 @@ def authorize(client_id: str = Query(...), redirect_url: str = Query(...), user_
     if application.redirect_url != redirect_url:
         raise HTTPException(status_code = 400, detail = "redirect_url does not match registered value")
 
-    user = db.query(User).filter(User.id == user_id and User.application_id == application.id).first()
+    user = db.query(User).filter(User.email == credentials.email).first()
+    
+    if not user or not verify_secret(credentials.password, user.password_hash):
+        raise HTTPException(status_code = 401, detail = "Invalid email or password")
 
-    if not user:
-        raise HTTPException(status_code = 400, detail = "Invalid user_id")
-
-    code = generate_auth_code()
-    auth_code = AuthCode(
-        code = code,
-        user_id = user_id,
-        application_id = application.id,
-        expires_at = datetime.now(timezone.utc) + timedelta(minutes = 5)
-    )
-
-    db.add(auth_code)
-    db.commit()
-
-    return RedirectResponse(url = f"{redirect_url}?code={code}")
+    return complete_login_or_signup(user, application, db)
 
 @router.post("/token", response_model = TokenResponse)
 def exchange_token(request: TokenRequest, db: Session = Depends(get_db)):
