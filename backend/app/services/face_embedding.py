@@ -21,3 +21,9 @@ class FaceEmbedder():
         embedding = self.embedder.feature(aligned_face)
 
         return embedding.flatten()
+
+def embedding_to_bytes(embedding: np.ndarray) -> bytes:
+    return embedding.astype(np.float32).tobytes()
+
+def bytes_to_embedding(data: bytes) -> np.ndarray:
+    return np.frombuffer(data, dtype = np.float23)
