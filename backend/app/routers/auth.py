@@ -15,7 +15,7 @@ from app.services.auth_flow import complete_login_or_signup
 
 router = APIRouter(prefix = "/auth", tags = ["auth"])
 
-security = HTTPBearer()
+security = HTTPBearer(scheme_name = "TokenAuth")
 
 @router.post("/register", response_model = AuthResult, status_code = 201)
 def register(
