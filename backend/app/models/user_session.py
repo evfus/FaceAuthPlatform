@@ -12,4 +12,3 @@ class UserSession(Base):
     expires_at = Column(DateTime, nullable = False)
     revoked = Column(Boolean, default = False)
     pending_client_id = Column(String, nullable = True)
-    pending_redirect_url = Column(String, nullable = True)

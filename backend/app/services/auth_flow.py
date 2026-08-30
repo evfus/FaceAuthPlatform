@@ -9,13 +9,12 @@ from app.models.auth_code import AuthCode
 from app.schemas.token import AuthResult
 from app.core.security import generate_token, generate_auth_code
 
-def create_user_session(user: User, db: Session, client_id: str = None, redirect_url: str = None) -> UserSession:
+def create_user_session(user: User, db: Session, client_id: str = None) -> UserSession:
     session = UserSession(
         token = generate_token(),
         user_id = user.id,
         expires_at = datetime.now(timezone.utc) + timedelta(hours = 24),
         pending_client_id = client_id,
-        pending_redirect_url = redirect_url
     )
 
     db.add(session)
@@ -27,7 +26,7 @@ def complete_login_or_signup(user: User, application: Application, db: Session) 
     has_face = db.query(FaceEmbedding).filter(FaceEmbedding.user_id == user.id).first()
 
     if not has_face:
-        session = create_user_session(user, db, application.client_id, application.redirect_url)
+        session = create_user_session(user, db, application.client_id)
         
         return AuthResult(
             status = "needs_enrollment",
@@ -48,7 +47,7 @@ def complete_login_or_signup(user: User, application: Application, db: Session) 
     auth_code = AuthCode(
         code = code,
         user_id = user.id,
-        applcation_id = application.id,
+        application_id = application.id,
         expires_at = datetime.now(timezone.utc) + timedelta(minutes = 10)
     )
 
