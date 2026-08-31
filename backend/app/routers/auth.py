@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Body
+from fastapi import APIRouter, Depends, HTTPException, Query, Body, Response, Request
 from fastapi.responses import RedirectResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
@@ -11,14 +11,52 @@ from app.models.token import Token
 from app.models.application import Application
 from app.models.user import User
 from app.models.auth_code import AuthCode
+from app.models.user_session import UserSession
+from app.models.face_embedding import FaceEmbedding
 from app.services.auth_flow import complete_login_or_signup
 
 router = APIRouter(prefix = "/auth", tags = ["auth"])
 
 security = HTTPBearer(scheme_name = "TokenAuth")
 
+@router.get("/session-check")
+def session_check(
+    request: Request,
+    client_id: str = Query(...),
+    redirect_url: str = Query(...),
+    db: Session = Depends(get_db)
+):
+
+    application = db.query(Application).filter(Application.client_id == client_id).first()
+
+    if not application:
+        raise HTTPException(status_code = 400, detail = "Invalid client_id")
+
+    if application.redirect_url != redirect_url:
+        raise HTTPException(status_code = 400, detail = "Invalid redirect_url")
+
+    token = request.cookies.get("session_token")
+
+    if not token:
+        return {"logged_in": False}
+
+    session = db.query(UserSession).filter(UserSession.token == token).first()
+
+    if not session or session.revoked or session.expires_at < utcnow_naive():
+        return {"logged_in": False}
+
+    user = db.query(User).filter(User.id == session.user_id).first()
+    has_face = db.query(FaceEmbedding).filter(FaceEmbedding.user_id == user.id).first()
+
+    if has_face is None:
+        session.pending_client_id = client_id
+        db.commit()
+
+    return {"logged_in": True, "email": user.email, "needs_enrollment": has_face is None}
+
 @router.post("/register", response_model = AuthResult, status_code = 201)
 def register(
+    response: Response,
     client_id: str = Query(...),
     redirect_url: str = Query(...),
     user_in: UserRegister = Body(...),
@@ -28,6 +66,7 @@ def register(
 
     if not application:
         raise HTTPException(status_code = 400, detail = "Invalid client_id")
+
     if application.redirect_url != redirect_url:
         raise HTTPException(status_code = 400, detail = "redirect_url does not match registered value")
 
@@ -45,13 +84,15 @@ def register(
     db.commit()
     db.refresh(user)
 
-    return complete_login_or_signup(user, application, db)
+    return complete_login_or_signup(user, application, response, db)
 
 @router.post("/authorize", response_model = AuthResult)
 def authorize(
+    response: Response,
+    request: Request,
     client_id: str = Query(...),
     redirect_url: str = Query(...),
-    credentials: AuthorizeRequest = Body(...),
+    credentials: AuthorizeRequest | None = Body(default = None),
     db: Session = Depends(get_db)
 ):
     application = db.query(Application).filter(Application.client_id == client_id).first()
@@ -62,12 +103,24 @@ def authorize(
     if application.redirect_url != redirect_url:
         raise HTTPException(status_code = 400, detail = "redirect_url does not match registered value")
 
+    token = request.cookies.get("session_token")
+
+    if token:
+        session = db.query(UserSession).filter(UserSession.token == token).first()
+
+        if session and not session.revoked and session.expires_at > utcnow_naive():
+            user = db.query(User).filter(User.id == session.user_id).first()
+            return complete_login_or_signup(user, application, response, db)
+
+    if credentials is None:
+        raise HTTPException(status_code = 401, detail = "Not logged in and no credentials provided")
+
     user = db.query(User).filter(User.email == credentials.email).first()
     
     if not user or not verify_secret(credentials.password, user.password_hash):
         raise HTTPException(status_code = 401, detail = "Invalid email or password")
 
-    return complete_login_or_signup(user, application, db)
+    return complete_login_or_signup(user, application, response, db)
 
 @router.post("/token", response_model = TokenResponse)
 def exchange_token(request: TokenRequest, db: Session = Depends(get_db)):

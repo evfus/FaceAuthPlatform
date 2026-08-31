@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Response
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.dependencies import get_user_from_session
@@ -17,6 +17,7 @@ router = APIRouter(prefix = "/face", tags = ["face"])
 
 @router.post("/enroll", response_model = AuthResult)
 def enroll_face(
+    response: Response,
     files: list[UploadFile] = File(...),
     current: tuple[User, UserSession] = Depends(get_user_from_session),
     db: Session = Depends(get_db)
@@ -56,7 +57,7 @@ def enroll_face(
 
     if session.pending_client_id:
         application = db.query(Application).filter(Application.client_id == session.pending_client_id).first()
-        result = complete_login_or_signup(user, application, db)
+        result = complete_login_or_signup(user, application, response, db)
 
         session.pending_client_id = None
 
