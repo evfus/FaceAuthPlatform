@@ -1,6 +1,5 @@
 from fastapi import FastAPI
 from app.core.database import Base, engine
-from app.models import application
 from app.routers import applications, users, auth, face
 
 Base.metadata.create_all(bind = engine)
