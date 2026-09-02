@@ -9,9 +9,9 @@ from app.models.user import User
 from app.models.application import Application
 from app.models.user_session import UserSession
 from app.models.face_embedding import FaceEmbedding
-from app.services.face_detection import FaceDetector
-from app.services.face_embedding import FaceEmbedder, embedding_to_bytes
+from app.services.face_embedding import embedding_to_bytes
 from app.services.auth_flow import complete_login_or_signup
+from app.core.face_models import detector, embedder
 
 router = APIRouter(prefix = "/face", tags = ["face"])
 
@@ -24,9 +24,6 @@ def enroll_face(
 ):
 
     user, session = current
-
-    detector = FaceDetector()
-    embedder = FaceEmbedder()
 
     new_embeddings = []
 
