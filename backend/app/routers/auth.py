@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Body, Response, Request
+import cv2
+import numpy as np
+from fastapi import APIRouter, Depends, HTTPException, Query, Body, Form, Response, Request, UploadFile, File
 from fastapi.responses import RedirectResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
@@ -7,13 +9,17 @@ from app.core.database import get_db
 from app.core.security import generate_auth_code, hash_secret, verify_secret, generate_token, utcnow_naive
 from app.schemas.token import TokenRequest, TokenResponse, AuthorizeRequest, AuthResult
 from app.schemas.user import UserRegister, UserResponse
+from app.schemas.face_login import FaceLoginResponse
 from app.models.token import Token
 from app.models.application import Application
 from app.models.user import User
 from app.models.auth_code import AuthCode
 from app.models.user_session import UserSession
+from app.models.authentication_event import AuthenticationEvent
 from app.models.face_embedding import FaceEmbedding
 from app.services.auth_flow import complete_login_or_signup
+from app.services.face_matching import match_face_to_user
+from app.core.face_models import detector, embedder
 
 router = APIRouter(prefix = "/auth", tags = ["auth"])
 
@@ -116,11 +122,87 @@ def authorize(
         raise HTTPException(status_code = 401, detail = "Not logged in and no credentials provided")
 
     user = db.query(User).filter(User.email == credentials.email).first()
-    
+ 
     if not user or not verify_secret(credentials.password, user.password_hash):
+        if user:
+            db.add(AuthenticationEvent(
+                application_id = application.id,
+                user_id = user.id,
+                result = "failure",
+                reason = "invalid credentials"
+            ))
+            db.commit()
+            
         raise HTTPException(status_code = 401, detail = "Invalid email or password")
 
+    db.add(AuthenticationEvent(
+        application_id = application.id,
+        user_id = user.id,
+        result = "success",
+        reason = None
+    ))
+    db.commit()
+
     return complete_login_or_signup(user, application, response, db)
+
+@router.post("/login/face", response_model = FaceLoginResponse)
+def login_with_face(
+    response: Response,
+    email: str = Form(...),
+    client_id: str = Form(...),
+    redirect_url: str = Form(...),
+    file: UploadFile = File(),
+    db: Session = Depends(get_db)
+):
+
+    user = db.query(User).filter(User.email == email).first()
+
+    if not user:
+        raise HTTPException(status_code = 404, detail = "No account found for this email")
+
+    application = db.query(Application).filter(Application.client_id == client_id).first()
+
+    if not application:
+        raise HTTPException(status_code = 400, detail = "Invalid client_id")
+
+    if application.redirect_url != redirect_url:
+        raise HTTPException(status_code = 400, detail = "redirect_url does not match registered value")
+
+    contents = file.file.read()
+    frame = cv2.imdecode(np.frombuffer(contents, np.uint8), cv2.IMREAD_COLOR)
+
+    if frame is None:
+        raise HTTPException(status_code = 400, detail = "Could not decode uploaded image")
+
+    match_result = match_face_to_user(frame, user, db, detector, embedder)
+
+    event = AuthenticationEvent(
+        application_id = application.id,
+        user_id = user.id,
+        result = "succes" if match_result.matched else "failure",
+        confidence = match_result.confidence,
+        reason = match_result.reason
+    )
+
+    db.add(event)
+    db.commit()
+
+    if not match_result.matched:
+        return FaceLoginResponse(
+            matched = False,
+            confidence = match_result.confidence,
+            reason = match_result.reason
+        )
+    
+    auth_result = complete_login_or_signup(user, application, response, db)
+
+    return FaceLoginResponse(
+        matched = True,
+        confidence = match_result.confidence,
+        session_token = auth_result.session_token,
+        session_expires_at = auth_result.session_expires_at,
+        redirect_url = auth_result.redirect_url
+    )
 
 @router.post("/token", response_model = TokenResponse)
 def exchange_token(request: TokenRequest, db: Session = Depends(get_db)):
