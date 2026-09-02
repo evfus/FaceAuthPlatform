@@ -19,7 +19,7 @@ def get_user_from_session(
     if not session:
         raise HTTPException(status_code = 401, detail = "Invalid session")
     if session.revoked:
-        raise HTTPException(staus_code = 401, detail = "Session revoked")
+        raise HTTPException(status_code = 401, detail = "Session revoked")
     if session.expires_at < utcnow_naive():
         raise HTTPException(status_code = 401, detail = "Session expired")
 
