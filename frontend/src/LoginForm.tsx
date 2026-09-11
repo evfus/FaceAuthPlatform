@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import type { FormEvent } from "react"
+import type { FormEvent } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 
 function LoginForm(){
@@ -103,7 +103,7 @@ function LoginForm(){
         <button type = "submit">{isSignup ? "Sign up" : "Log in"}</button>
       </form>
       {error && <p style = {{ color: "red"}}> {error} </p>}
-            
+
       <button type = "button" onClick = {() => setIsSignup(!isSignup)}>
         {isSignup ? "Already have an account? Log in" : "Need an account? Sign up"}
       </button>
