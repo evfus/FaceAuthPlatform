@@ -1,5 +1,4 @@
-from fastapi import Depends, HTTPException
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone, timedelta
 from app.core.database import get_db
@@ -7,14 +6,16 @@ from app.core.security import utcnow_naive
 from app.models.user import User
 from app.models.user_session import UserSession
 
-session_security = HTTPBearer(scheme_name = "SessionAuth")
-
 def get_user_from_session(
-    credentials: HTTPAuthorizationCredentials = Depends(session_security),
+    request: Request,
     db: Session = Depends(get_db)
 ) -> tuple[User, UserSession]:
 
-    session = db.query(UserSession).filter(UserSession.token == credentials.credentials).first()
+    session_token = request.cookies.get("session_token")
+    if not session_token:
+        raise HTTPException(status_code = 401, detail = "Not authenticated")
+
+    session = db.query(UserSession).filter(UserSession.token == session_token).first()
 
     if not session:
         raise HTTPException(status_code = 401, detail = "Invalid session")
@@ -30,5 +31,5 @@ def get_user_from_session(
 
     if not user:
         raise HTTPException(status_code = 404, detail = "User not found")
-
+    
     return user, session
