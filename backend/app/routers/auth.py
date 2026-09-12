@@ -28,8 +28,11 @@ security = HTTPBearer(scheme_name = "TokenAuth")
 @router.get("/email-exists")
 def email_exists(email: str, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == email).first()
+    if not user:
+        return {"exists": False, "needs_enrollment": False}
 
-    return {"exists": user is not None}
+    has_face = db.query(FaceEmbedding).filter(FaceEmbedding.user_id == user.id).first()
+    return {"exists": True, "needs_enrollment": not has_face}
 
 @router.get("/session-check")
 def session_check(
@@ -209,6 +212,20 @@ def login_with_face(
         session_expires_at = auth_result.session_expires_at,
         redirect_url = auth_result.redirect_url
     )
+
+@router.post("/logout")
+def logout(response: Response, request: Request, db: Session = Depends(get_db)):
+    session_token = request.cookies.get("session_token")
+
+    if session_token:
+        session = db.query(UserSession).filter(UserSession.token == session_token).first()
+        if session:
+            db.delete(session)
+            db.commit()
+
+    response.delete_cookie("session_token")
+
+    return {"logged out": True}
 
 @router.post("/token", response_model = TokenResponse)
 def exchange_token(request: TokenRequest, db: Session = Depends(get_db)):
