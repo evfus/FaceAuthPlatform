@@ -1,12 +1,13 @@
 import { useRef, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 
 function Enroll() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [samples, setSamples] = useState<string[]>([]);
   const [error, setError] = useState("");
-  const navigate = useNavigate()
+  const [searchParams] = useSearchParams();
+  const email = searchParams.get("email");
 
   useEffect(() => {
     async function startCamera() {
@@ -57,7 +58,12 @@ function Enroll() {
     });
 
     if (!res.ok) {
-      setError("Enrollment failed. Please try again.");
+      const errData = await res.json();
+      const ERROR_MESSAGES: Record<string, string> = {
+        "No face detected": "No face detected. Make sure your face is crearly visible.",
+        "Multiple faces detected": "Multiple faces detected. Make sure you are alone in the face capture."
+      }
+      setError(ERROR_MESSAGES[errData.detail] ?? "Enrollment failed. Please try again.");
       return;
     }
 
@@ -79,6 +85,7 @@ function Enroll() {
     <div>
       <div>
         <h1>Face Enrollment</h1>
+        {email && <p>Setting up face login for {email}</p>}
         <video
           ref={videoRef}
           autoPlay
@@ -94,7 +101,7 @@ function Enroll() {
       <div>
         <button
           type="button"
-          onClick={captureSample}
+          onClick={() => { captureSample(); setError(""); }}
           style={{
             width: "70px",
             height: "70px",
@@ -111,7 +118,7 @@ function Enroll() {
           <div key={index}>
             <img src={sample} width={80} height={60} alt={`Sample ${index + 1}`} />
             <div>
-              <button type="button" onClick={() => removeSample(index)}>
+              <button type="button" onClick={() => { removeSample(index); setError(""); }}>
                 Remove
               </button>
             </div>
@@ -123,6 +130,10 @@ function Enroll() {
         <button type="button" onClick={handleEnrollSubmit} disabled={samples.length === 0}>
           Finish Enrollment
         </button>
+      </div>
+
+      <div>
+        {error && <p style={{ color: "red" }}> {error} </p>}
       </div>
 
     </div>

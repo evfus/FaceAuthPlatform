@@ -34,7 +34,7 @@ function LoginForm() {
       const data = await res.json();
 
       if (data.logged_in && data.needs_enrollment) {
-        navigate("/enroll");
+        navigate(`/enroll?${new URLSearchParams({ email: data.email }).toString()}`);
       }
       else if (data.logged_in && !data.needs_enrollment) {
         const params = new URLSearchParams({
@@ -124,7 +124,7 @@ function LoginForm() {
     const data = await res.json();
 
     if (data.status == "needs_enrollment") {
-      navigate("/enroll");
+      navigate(`/enroll?${new URLSearchParams({ email }).toString()}`);
     }
     else {
       window.location.href = data.redirect_url
