@@ -110,15 +110,17 @@ function Enroll() {
         {samples.map((sample, index) => (
           <div key={index}>
             <img src={sample} width={80} height={60} alt={`Sample ${index + 1}`} />
-            <button type="button" onClick={() => removeSample(index)}>
-              Remove
-            </button>
+            <div>
+              <button type="button" onClick={() => removeSample(index)}>
+                Remove
+              </button>
+            </div>
           </div>
         ))}
       </div>
 
       <div>
-        <button type = "button" onClick = {handleEnrollSubmit} disabled = {samples.length === 0}>
+        <button type="button" onClick={handleEnrollSubmit} disabled={samples.length === 0}>
           Finish Enrollment
         </button>
       </div>
