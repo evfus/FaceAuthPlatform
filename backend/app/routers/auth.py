@@ -25,6 +25,12 @@ router = APIRouter(prefix = "/auth", tags = ["auth"])
 
 security = HTTPBearer(scheme_name = "TokenAuth")
 
+@router.get("/email-exists")
+def email_exists(email: str, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == email).first()
+
+    return {"exists": user is not None}
+
 @router.get("/session-check")
 def session_check(
     request: Request,
