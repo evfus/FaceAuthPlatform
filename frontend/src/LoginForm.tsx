@@ -37,7 +37,13 @@ function LoginForm() {
         navigate("/enroll");
       }
       else if (data.logged_in && !data.needs_enrollment) {
-        navigate("/confirm");
+        const params = new URLSearchParams({
+          email: data.email,
+          client_id: clientId ?? "",
+          redirect_url: redirectUrl ?? ""
+        });
+
+        navigate(`/confirm?${params.toString()}`);
       }
       else {
         setCheckingSession(false);
@@ -65,11 +71,6 @@ function LoginForm() {
     e.preventDefault();
     setError("");
 
-    if (isSignup) {
-      setStage("password");
-      return;
-    }
-
     const params = new URLSearchParams({ email });
 
     const res = await fetch(`http://localhost:8000/auth/email-exists?${params.toString()}`,
@@ -78,12 +79,21 @@ function LoginForm() {
 
     const data = await res.json();
 
-    if (data.exists) {
-      setStage("face");
+    if (isSignup) {
+      if (data.exists) {
+        setError("Email already exists.");
+        return;
+      }
+      setStage("password");
+      return;
     }
-    else {
-      setError("No account found with this email");
+
+    if (!data.exists) {
+      setError("No account found with this email.");
+      return;
     }
+
+    setStage(data.needs_enrollment ? "password" : "face");
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -106,7 +116,7 @@ function LoginForm() {
 
     if (!res.ok) {
       const errData = await res.json();
-    
+
       setError(errData.detail ?? "Something went wrong. Please try again.");
       return;
     }
@@ -168,7 +178,7 @@ function LoginForm() {
       below_threshold: "Face did not match. Please try again."
     }
 
-    if (!data.matched){
+    if (!data.matched) {
       setError(REASON_MESSAGES[data.reason] ?? "Face did not match. Pleasy try again.");
       return;
     }
@@ -192,11 +202,13 @@ function LoginForm() {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Email address"
           />
-          <button type="submit">Continue</button>
+          <div>
+            <button type="submit">Continue</button>
+          </div>
         </form>
 
         {error && <p style={{ color: "red" }}> {error} </p>}
-
+        
         <button type="button" onClick={() => { setIsSignup(!isSignup); setError(""); }}>
           {isSignup ? "Already have an account? Log in" : "Need an account? Sign up"}
         </button>
@@ -226,8 +238,8 @@ function LoginForm() {
           </div>
 
           <div>
-            <button type="button" onClick={() => { setIsSignup(!isSignup); setError(""); }}>
-              {isSignup ? "Already have an account? Log in" : "Need an account? Sign up"}
+            <button type="button" onClick={() => { setStage("email"); setError(""); setPassword(""); }}>
+              Use a different email
             </button>
           </div>
         </form>
