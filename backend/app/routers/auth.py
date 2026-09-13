@@ -188,7 +188,7 @@ def login_with_face(
     event = AuthenticationEvent(
         application_id = application.id,
         user_id = user.id,
-        result = "succes" if match_result.matched else "failure",
+        result = "success" if match_result.matched else "failure",
         confidence = match_result.confidence,
         reason = match_result.reason
     )
