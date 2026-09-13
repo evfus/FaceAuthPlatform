@@ -12,12 +12,13 @@ function Confirm() {
   async function handleContinue() {
     setError("");
 
-    const params = new URLSearchParams({
-      client_id: clientId ?? "",
-      redirect_url: redirectUrl ?? ""
-    });
+    const params = new URLSearchParams();
 
-    const res = await fetch(`http://localhost:8000/auth/authorize?${params.toString()}`,
+    if (clientId) params.set("client_id", clientId);
+    if (redirectUrl) params.set("redirect_url", redirectUrl);
+    const query = params.toString();
+
+    const res = await fetch(`http://localhost:8000/auth/authorize?${query ? `?${query}` : ""}`,
       {
         method: "POST",
         credentials: "include"
@@ -30,7 +31,12 @@ function Confirm() {
     }
 
     const data = await res.json();
-    window.location.href = data.redirect_url
+    if (data.redirect_url) {
+      window.location.href = data.redirect_url;
+    }
+    else {
+      navigate("/");
+    }
   }
 
   async function handleDifferentAccount() {
@@ -41,11 +47,13 @@ function Confirm() {
       }
     );
 
-    const params = new URLSearchParams({
-      client_id: clientId ?? "",
-      redirect_url: redirectUrl ?? ""
-    });
-    navigate(`/login?${params.toString()}`);
+    const params = new URLSearchParams();
+
+    if (clientId) params.set("client_id", clientId);
+    if (redirectUrl) params.set("redirect_url", redirectUrl);
+    const query = params.toString();
+
+    navigate(`/login${query ? `?${query}` : ""}`);
   }
 
   return (
@@ -53,9 +61,9 @@ function Confirm() {
       <div>
         <h1>Continue as {email}?</h1>
       </div>
-      
+
       {error && <p style={{ color: "red" }}>{error}</p>}
-      
+
       <div>
         <button type="button" onClick={handleContinue}>
           Continue

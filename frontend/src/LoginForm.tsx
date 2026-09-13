@@ -5,8 +5,13 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 type Stage = "email" | "face" | "password";
 
 function LoginForm() {
+  const [searchParams] = useSearchParams();
+  const clientId = searchParams.get("client_id");
+  const redirectUrl = searchParams.get("redirect_url");
+  const mode = searchParams.get("mode");
+
   const [CheckingSession, setCheckingSession] = useState(false);
-  const [isSignup, setIsSignup] = useState(false);
+  const [isSignup, setIsSignup] = useState(mode === "signup");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -15,20 +20,17 @@ function LoginForm() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const [searchParams] = useSearchParams();
-  const clientId = searchParams.get("client_id");
-  const redirectUrl = searchParams.get("redirect_url");
-
   const navigate = useNavigate();
 
   useEffect(() => {
     async function checkSession() {
-      const params = new URLSearchParams({
-        client_id: clientId ?? "",
-        redirect_url: redirectUrl ?? ""
-      });
+      const params = new URLSearchParams();
 
-      const res = await fetch(`http://localhost:8000/auth/session-check?${params.toString()}`,
+      if (clientId) params.set("client_id", clientId);
+      if (redirectUrl) params.set("redirect_url", redirectUrl);
+      const query = params.toString();
+
+      const res = await fetch(`http://localhost:8000/auth/session-check${query ? `?${query}` : ""}`,
         { credentials: "include" }
       );
       const data = await res.json();
@@ -37,13 +39,13 @@ function LoginForm() {
         navigate(`/enroll?${new URLSearchParams({ email: data.email }).toString()}`);
       }
       else if (data.logged_in && !data.needs_enrollment) {
-        const params = new URLSearchParams({
-          email: data.email,
-          client_id: clientId ?? "",
-          redirect_url: redirectUrl ?? ""
-        });
+        const params = new URLSearchParams({ email: data.email });
 
-        navigate(`/confirm?${params.toString()}`);
+        if (clientId) params.set("client_id", clientId);
+        if (redirectUrl) params.set("redirect_url", redirectUrl);
+        const query = params.toString();
+
+        navigate(`/confirm${query ? `?${query}` : ""}`);
       }
       else {
         setCheckingSession(false);
@@ -101,12 +103,13 @@ function LoginForm() {
 
     const endpoint = isSignup ? "/auth/register" : "/auth/authorize";
 
-    const params = new URLSearchParams({
-      client_id: clientId ?? "",
-      redirect_url: redirectUrl ?? ""
-    });
+    const params = new URLSearchParams();
 
-    const res = await fetch(`http://localhost:8000${endpoint}?${params.toString()}`,
+    if (clientId) params.set("client_id", clientId);
+    if (redirectUrl) params.set("redirect_url", redirectUrl);
+    const query = params.toString();
+
+    const res = await fetch(`http://localhost:8000${endpoint}${query ? `?${query}` : ""}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -126,8 +129,11 @@ function LoginForm() {
     if (data.status == "needs_enrollment") {
       navigate(`/enroll?${new URLSearchParams({ email }).toString()}`);
     }
-    else {
-      window.location.href = data.redirect_url
+    else if (data.redirect_url){
+      window.location.href = data.redirect_url;
+    }
+    else{
+      navigate("/");
     }
   }
 
@@ -153,8 +159,8 @@ function LoginForm() {
     const formData = new FormData();
 
     formData.append("email", email);
-    formData.append("client_id", clientId ?? "");
-    formData.append("redirect_url", redirectUrl ?? "");
+    if (clientId) formData.append("client_id", clientId);
+    if (redirectUrl) formData.append("redirect_url", redirectUrl);
     formData.append("file", blob, "capture.jpg");
 
     const res = await fetch("http://localhost:8000/auth/login/face",
@@ -183,8 +189,12 @@ function LoginForm() {
       return;
     }
 
-    window.location.href = data.redirect_url;
-
+    if(data.redirect_url){
+      window.location.href = data.redirect_url;
+    }
+    else{
+      navigate("/")
+    }
   }
 
   if (CheckingSession) {
@@ -194,7 +204,7 @@ function LoginForm() {
   if (stage === "email") {
     return (
       <div>
-        <h1>{isSignup ? "Sign up" : "Login"}</h1>
+        <h1>{isSignup ? "Sign up" : "Log in"}</h1>
         <form onSubmit={handleEmailSubmit}>
           <input
             type="email"

@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 
 function Enroll() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -8,6 +8,8 @@ function Enroll() {
   const [error, setError] = useState("");
   const [searchParams] = useSearchParams();
   const email = searchParams.get("email");
+
+  const navigate = useNavigate()
 
   useEffect(() => {
     async function startCamera() {
@@ -73,7 +75,7 @@ function Enroll() {
       window.location.href = data.redirect_url;
     }
     else {
-      console.log("Enrollment updated successfully.");
+      navigate(`/`);
     }
   }
 

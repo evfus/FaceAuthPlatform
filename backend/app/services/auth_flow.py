@@ -46,7 +46,7 @@ def create_user_session(user: User, db: Session, client_id: str = None) -> UserS
 
 def complete_login_or_signup(
     user: User,
-    application: Application,
+    application: Application | None,
     response: Response,
     db: Session
 ) -> AuthResult:
@@ -54,7 +54,7 @@ def complete_login_or_signup(
     has_face = db.query(FaceEmbedding).filter(FaceEmbedding.user_id == user.id).first()
 
     if not has_face:
-        session = get_or_create_user_session(user, db, application.client_id)
+        session = get_or_create_user_session(user, db, application.client_id if application else None)
         set_session_cookie(response, session)
 
         return AuthResult(
@@ -63,6 +63,17 @@ def complete_login_or_signup(
             session_expires_at = session.expires_at
         )
     
+    if application is None:
+        session = get_or_create_user_session(user, db, application.client_id if application else None)
+        set_session_cookie(response, session)
+
+        return AuthResult(
+            status = "authorized",
+            session_token = session.token,
+            session_expires_at = session.expires_at
+        )
+
+
     connection = (
         db.query(AppConnection)
         .filter(AppConnection.user_id == user.id, AppConnection.application_id == application.id)

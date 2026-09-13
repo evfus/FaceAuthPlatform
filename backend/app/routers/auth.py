@@ -37,18 +37,20 @@ def email_exists(email: str, db: Session = Depends(get_db)):
 @router.get("/session-check")
 def session_check(
     request: Request,
-    client_id: str = Query(...),
-    redirect_url: str = Query(...),
+    client_id: str | None = Query(default = None),
+    redirect_url: str | None = Query(default = None),
     db: Session = Depends(get_db)
 ):
 
-    application = db.query(Application).filter(Application.client_id == client_id).first()
+    application = None 
+    if client_id:
+        application = db.query(Application).filter(Application.client_id == client_id).first()
 
-    if not application:
-        raise HTTPException(status_code = 400, detail = "Invalid client_id")
+        if not application:
+            raise HTTPException(status_code = 400, detail = "Invalid client_id")
 
-    if application.redirect_url != redirect_url:
-        raise HTTPException(status_code = 400, detail = "Invalid redirect_url")
+        if application.redirect_url != redirect_url:
+            raise HTTPException(status_code = 400, detail = "Invalid redirect_url")
 
     token = request.cookies.get("session_token")
 
@@ -63,27 +65,48 @@ def session_check(
     user = db.query(User).filter(User.id == session.user_id).first()
     has_face = db.query(FaceEmbedding).filter(FaceEmbedding.user_id == user.id).first()
 
-    if has_face is None:
+    if has_face is None and application:
         session.pending_client_id = client_id
         db.commit()
+
+    return {"logged_in": True, "email": user.email, "needs_enrollment": has_face is None}
+
+@router.get("/me")
+def get_me(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    token = request.cookies.get("session_token")
+    if not token:
+        return {"logged_in": False}
+
+    session = db.query(UserSession).filter(UserSession.token == token).first()
+    if not session or session.revoked or session.expires_at < utcnow_naive():
+        return {"logged_in": False}
+
+    user = db.query(User).filter(User.id == session.user_id).first()
+    has_face = db.query(FaceEmbedding).filter(FaceEmbedding.user_id == user.id).first()
 
     return {"logged_in": True, "email": user.email, "needs_enrollment": has_face is None}
 
 @router.post("/register", response_model = AuthResult, status_code = 201)
 def register(
     response: Response,
-    client_id: str = Query(...),
-    redirect_url: str = Query(...),
+    client_id: str | None = Query(default = None),
+    redirect_url: str | None = Query(default = None),
     user_in: UserRegister = Body(...),
     db: Session = Depends(get_db)
 ):
-    application = db.query(Application).filter(Application.client_id == client_id).first()
+    application = None
 
-    if not application:
-        raise HTTPException(status_code = 400, detail = "Invalid client_id")
+    if client_id:
+        application = db.query(Application).filter(Application.client_id == client_id).first()
 
-    if application.redirect_url != redirect_url:
-        raise HTTPException(status_code = 400, detail = "redirect_url does not match registered value")
+        if not application:
+            raise HTTPException(status_code = 400, detail = "Invalid client_id")
+
+        if application.redirect_url != redirect_url:
+            raise HTTPException(status_code = 400, detail = "redirect_url does not match registered value")
 
     existing = db.query(User).filter(User.email == user_in.email).first()
 
@@ -105,18 +128,21 @@ def register(
 def authorize(
     response: Response,
     request: Request,
-    client_id: str = Query(...),
-    redirect_url: str = Query(...),
+    client_id: str | None = Query(default = None),
+    redirect_url: str = Query(default = None),
     credentials: AuthorizeRequest | None = Body(default = None),
     db: Session = Depends(get_db)
 ):
-    application = db.query(Application).filter(Application.client_id == client_id).first()
+    application = None
 
-    if not application:
-        raise HTTPException(status_code = 400, detail = "Invalid client_id")
+    if client_id:
+        application = db.query(Application).filter(Application.client_id == client_id).first()
 
-    if application.redirect_url != redirect_url:
-        raise HTTPException(status_code = 400, detail = "redirect_url does not match registered value")
+        if not application:
+            raise HTTPException(status_code = 400, detail = "Invalid client_id")
+
+        if application.redirect_url != redirect_url:
+            raise HTTPException(status_code = 400, detail = "redirect_url does not match registered value")
 
     token = request.cookies.get("session_token")
 
@@ -133,7 +159,7 @@ def authorize(
     user = db.query(User).filter(User.email == credentials.email).first()
  
     if not user or not verify_secret(credentials.password, user.password_hash):
-        if user:
+        if user and application:
             db.add(AuthenticationEvent(
                 application_id = application.id,
                 user_id = user.id,
@@ -144,13 +170,14 @@ def authorize(
             
         raise HTTPException(status_code = 401, detail = "Invalid email or password")
 
-    db.add(AuthenticationEvent(
-        application_id = application.id,
-        user_id = user.id,
-        result = "success",
-        reason = None
-    ))
-    db.commit()
+    if application:
+        db.add(AuthenticationEvent(
+            application_id = application.id,
+            user_id = user.id,
+            result = "success",
+            reason = None
+        ))
+        db.commit()
 
     return complete_login_or_signup(user, application, response, db)
 
@@ -158,8 +185,8 @@ def authorize(
 def login_with_face(
     response: Response,
     email: str = Form(...),
-    client_id: str = Form(...),
-    redirect_url: str = Form(...),
+    client_id: str | None = Form(default = None),
+    redirect_url: str | None = Form(default = None),
     file: UploadFile = File(),
     db: Session = Depends(get_db)
 ):
@@ -168,14 +195,17 @@ def login_with_face(
 
     if not user:
         raise HTTPException(status_code = 404, detail = "No account found for this email")
+    
+    application = None
 
-    application = db.query(Application).filter(Application.client_id == client_id).first()
+    if client_id:
+        application = db.query(Application).filter(Application.client_id == client_id).first()
 
-    if not application:
-        raise HTTPException(status_code = 400, detail = "Invalid client_id")
+        if not application:
+            raise HTTPException(status_code = 400, detail = "Invalid client_id")
 
-    if application.redirect_url != redirect_url:
-        raise HTTPException(status_code = 400, detail = "redirect_url does not match registered value")
+        if application.redirect_url != redirect_url:
+            raise HTTPException(status_code = 400, detail = "redirect_url does not match registered value")
 
     contents = file.file.read()
     frame = cv2.imdecode(np.frombuffer(contents, np.uint8), cv2.IMREAD_COLOR)
@@ -184,17 +214,18 @@ def login_with_face(
         raise HTTPException(status_code = 400, detail = "Could not decode uploaded image")
 
     match_result = match_face_to_user(frame, user, db, detector, embedder)
+    
+    if application:
+        event = AuthenticationEvent(
+            application_id = application.id,
+            user_id = user.id,
+            result = "success" if match_result.matched else "failure",
+            confidence = match_result.confidence,
+            reason = match_result.reason
+        )
 
-    event = AuthenticationEvent(
-        application_id = application.id,
-        user_id = user.id,
-        result = "success" if match_result.matched else "failure",
-        confidence = match_result.confidence,
-        reason = match_result.reason
-    )
-
-    db.add(event)
-    db.commit()
+        db.add(event)
+        db.commit()
 
     if not match_result.matched:
         return FaceLoginResponse(
@@ -266,22 +297,3 @@ def exchange_token(request: TokenRequest, db: Session = Depends(get_db)):
     db.commit()
 
     return TokenResponse(token = token_value, expires_at = token.expires_at)
-
-@router.get("/users/me", response_model = UserResponse)
-def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
-    token_value = credentials.credentials
-
-    token = db.query(Token).filter(Token.token == token_value).first()
-
-    if not token:
-        raise HTTPException(status_code = 401, detail = "Invalid token")
-
-    if token.expires_at < utcnow_naive():
-        raise HTTPException(status_code = 401, detail = "Token expired")
-
-    user = db.query(User).filter(User.id == token.user_id).first()
-
-    if not user:
-        raise HTTPException(status_code = 404, detail = "User not found")
-
-    return user
