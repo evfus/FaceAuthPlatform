@@ -28,8 +28,6 @@ function AuthEvents() {
     async function fetchEvents() {
       const res = await fetch("http://localhost:8000/admin/auth-events");
       const data = await res.json();
-      console.log(data)
-
       setEvents(data);
     }
 
