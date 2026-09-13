@@ -20,6 +20,9 @@ function Account() {
     <div>
       <h1>Account</h1>
       <p>Email: {email}</p>
+      <button onClick={() => navigate(`/enroll?email=${encodeURIComponent(email ?? "")}`)}>
+        Update Face Login
+      </button>
     </div>
   );
 }
