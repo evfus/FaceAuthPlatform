@@ -5,6 +5,7 @@ import Confirm from "./Confirm"
 import AuthEvent from "./AuthEvents";
 import Home from "./Home"
 import NavBar from "./NavBar";
+import Account from "./Account";
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
         <Route path="/enroll" element={<Enroll />} />
         <Route path="/confirm" element={<Confirm />} />
         <Route path="/admin" element={<AuthEvent />} />
+        <Route path="/account" element={<Account />} />
       </Routes>
     </BrowserRouter>
   );

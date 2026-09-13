@@ -133,7 +133,7 @@ function LoginForm() {
       window.location.href = data.redirect_url;
     }
     else{
-      navigate("/");
+      navigate("/account");
     }
   }
 
@@ -193,7 +193,7 @@ function LoginForm() {
       window.location.href = data.redirect_url;
     }
     else{
-      navigate("/")
+      navigate("/account")
     }
   }
 

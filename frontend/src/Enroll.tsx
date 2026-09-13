@@ -75,7 +75,7 @@ function Enroll() {
       window.location.href = data.redirect_url;
     }
     else {
-      navigate(`/`);
+      navigate("/account");
     }
   }
 
