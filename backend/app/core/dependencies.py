@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timezone, timedelta
 from app.core.database import get_db
 from app.core.security import utcnow_naive
+from app.core.config import settings
 from app.models.user import User
 from app.models.user_session import UserSession
 
@@ -24,7 +25,7 @@ def get_user_from_session(
     if session.expires_at < utcnow_naive():
         raise HTTPException(status_code = 401, detail = "Session expired")
 
-    session.expires_at = datetime.now(timezone.utc) + timedelta(hours = 24)
+    session.expires_at = datetime.now(timezone.utc) + settings.session_lifetime
     db.commit()
 
     user = db.query(User).filter(User.id == session.user_id).first()

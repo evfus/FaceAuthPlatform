@@ -1,6 +1,7 @@
 from fastapi import Response
 from datetime import datetime, timezone, timedelta
 from sqlalchemy.orm import Session
+from app.core.config import settings
 from app.models.user import User
 from app.models.application import Application
 from app.models.user_session import UserSession
@@ -21,7 +22,7 @@ def get_or_create_user_session(user: User, db: Session, client_id: str = None) -
     )
 
     if existing:
-        existing.expires_at = datetime.now(timezone.utc) + timedelta(hours = 24)
+        existing.expires_at = datetime.now(timezone.utc) + settings.session_lifetime
         if client_id is not None:
             existing.pending_client_id = client_id
 
@@ -35,7 +36,7 @@ def create_user_session(user: User, db: Session, client_id: str = None) -> UserS
     session = UserSession(
         token = generate_token(),
         user_id = user.id,
-        expires_at = datetime.now(timezone.utc) + timedelta(hours = 24),
+        expires_at = datetime.now(timezone.utc) + settings.session_lifetime,
         pending_client_id = client_id,
     )
 

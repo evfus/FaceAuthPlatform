@@ -1,5 +1,6 @@
 from pathlib import Path
 from pydantic_settings import BaseSettings
+from datetime import timedelta
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -11,6 +12,8 @@ class Settings(BaseSettings):
     face_embedder_model: str = str(BASE_DIR / "ml_models" / "face_detection" / "face_recognition_sface.onnx")
     
     face_match_threshold: float = 0.4
+
+    session_lifetime: timedelta = timedelta(hours = 24)
 
     class Config:
         env_file = ".env"
