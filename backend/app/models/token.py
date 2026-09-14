@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
 from app.core.database import Base
@@ -11,6 +11,7 @@ class Token(Base):
     application_id = Column(Integer, ForeignKey("applications.id"), nullable = False, index = True)
     expires_at = Column(DateTime, nullable = False)
     created_at = Column(DateTime, default = lambda: datetime.now(timezone.utc))
+    revoked = Column(Boolean, default = False)
 
     user = relationship("User")
     application = relationship("Application")
