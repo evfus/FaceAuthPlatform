@@ -13,6 +13,7 @@ from app.schemas.face_login import FaceLoginResponse
 from app.models.token import Token
 from app.models.application import Application
 from app.models.user import User
+from app.models.app_connection import AppConnection
 from app.models.auth_code import AuthCode
 from app.models.user_session import UserSession
 from app.models.authentication_event import AuthenticationEvent
@@ -20,6 +21,7 @@ from app.models.face_embedding import FaceEmbedding
 from app.services.auth_flow import complete_login_or_signup
 from app.services.face_matching import match_face_to_user
 from app.core.face_models import detector, embedder
+from app.core.dependencies import get_user_from_session
 
 router = APIRouter(prefix = "/auth", tags = ["auth"])
 
@@ -297,3 +299,56 @@ def exchange_token(request: TokenRequest, db: Session = Depends(get_db)):
     db.commit()
 
     return TokenResponse(token = token_value, expires_at = token.expires_at)
+
+@router.get("/connections")
+def get_connections(
+    user_session: tuple = Depends(get_user_from_session),
+    db: Session = Depends(get_db)
+):
+
+    user, _ = user_session
+
+    connections = (
+        db.query(AppConnection)
+        .filter(AppConnection.user_id == user.id)
+        .all()
+    )
+
+    result = []
+    for conn in connections:
+        application = db.query(Application).filter(Application.id == conn.application_id).first()
+        result.append({
+            "application_id": conn.application_id,
+            "name": application.name if application else "Unknown app",
+            "connected_at": conn.created_at
+        })
+
+    return result
+
+@router.delete("/connections/{application_id}")
+def revoke_connection(
+    application_id: int,
+    user_session: tuple = Depends(get_user_from_session),
+    db: Session = Depends(get_db)
+):
+    
+    user, _ = user_session
+
+    connection = (
+        db.query(AppConnection)
+        .filter(AppConnection.user_id == user.id, AppConnection.application_id == application_id)
+        .first()
+    )
+    if not connection:
+        raise HTTPException(status_code=404, detail="Connection not found")
+
+    db.query(Token).filter(
+        Token.user_id == user.id,
+        Token.application_id == application_id,
+        Token.revoked == False
+    ).update({"revoked": True})
+
+    db.delete(connection)
+    db.commit()
+
+    return {"status": "revoked"}
