@@ -6,23 +6,23 @@ from app.core.security import hash_secret, verify_secret
 from app.core.dev_session import get_or_create_developer_session, set_developer_session_cookie
 from app.core.dev_dependencies import get_developer_from_session
 from app.models.developer import Developer
+from app.schemas.developer import DeveloperAuthRequest
 
 router = APIRouter(prefix = "/developer", tags = ["developer"])
 
 @router.post("/register")
 def register_developer(
     response: Response,
-    email: str = Form(...),
-    password: str = Form(...),
-    db: Session = Depends(get_db),
+    body: DeveloperAuthRequest,
+    db: Session = Depends(get_db)
 ):
-    existing = db.query(Developer).filter(Developer.email == email).first()
+    existing = db.query(Developer).filter(Developer.email == body.email).first()
     if existing:
         raise HTTPException(status_code = 400, detail = "Email already registered")
 
     developer = Developer(
-        email = email,
-        password_hash = hash_secret(password),
+        email = body.email,
+        password_hash = hash_secret(body.password),
         created_at = datetime.now(timezone.utc),
     )
 
@@ -38,12 +38,11 @@ def register_developer(
 @router.post("/login")
 def login_developer(
     response: Response,
-    email: str = Form(...),
-    password: str = Form(...),
-    db: Session = Depends(get_db),
+    body: DeveloperAuthRequest,
+    db: Session = Depends(get_db)
 ):
-    developer = db.query(Developer).filter(Developer.email == email).first()
-    if not developer or not verify_secret(password, developer.password_hash):
+    developer = db.query(Developer).filter(Developer.email == body.email).first()
+    if not developer or not verify_secret(body.password, developer.password_hash):
         raise HTTPException(status_code = 401, detail = "Invalid email or password")
 
     session = get_or_create_developer_session(developer.id, db)
@@ -64,7 +63,7 @@ def get_developer_me(
 def logout_developer(
     response: Response,
     developer_and_session: tuple[Developer, DeveloperSession] = Depends(get_developer_from_session),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db)
 ):
     _, session = developer_and_session
 
