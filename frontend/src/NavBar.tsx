@@ -6,7 +6,12 @@ function NavBar() {
   const location = useLocation();
   const { loggedIn, loading, logout } = useAuth();
 
-  if (location.pathname === "/login" || location.pathname === "/confirm") {
+  if (
+    location.pathname === "/login" ||
+    location.pathname === "/confirm" ||
+    location.pathname === "/enroll" ||
+    location.pathname.startsWith("/developer")
+  ) {
     return null;
   }
 
