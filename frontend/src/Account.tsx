@@ -35,7 +35,7 @@ function Account() {
     if (loggedIn) {
       fetchConnections();
     }
-  }, [loggedIn]);
+  }, [loading, loggedIn]);
 
   async function handleDisconnect(applicationId: number) {
     const res = await fetch(`http://localhost:8000/auth/connections/${applicationId}`,
