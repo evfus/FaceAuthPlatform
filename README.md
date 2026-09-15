@@ -1,4 +1,4 @@
-# FaceAuth
+# FaceAuth - WIP
 
 FaceAuth is a face authentication identity provider. It works like OAuth, but instead of a password screen, client apps redirect users to FaceAuth to log in with their face. FaceAuth handles the webcam capture and face matching, then sends back a short-lived auth code that the client app exchanges for an access token. The client app never sees or stores raw face data.
 
