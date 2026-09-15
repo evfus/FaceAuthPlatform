@@ -36,5 +36,5 @@ def set_developer_session_cookie(response: Response, session: DeveloperSession) 
         max_age = max_age_seconds,
         httponly = True,
         secure = False,
-        samesite = "lax",
+        samesite = "lax"
     )
