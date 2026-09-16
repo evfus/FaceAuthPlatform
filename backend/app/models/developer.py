@@ -8,4 +8,4 @@ class Developer(Base):
     id = Column(Integer, primary_key = True)
     email = Column(String, unique = True, index = True, nullable = False)
     password_hash = Column(String, nullable = False)
-    created_at = Column(DateTime, default = datetime.now(timezone.utc))
+    created_at = Column(DateTime, default = lambda: datetime.now(timezone.utc))

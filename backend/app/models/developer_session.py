@@ -9,5 +9,5 @@ class DeveloperSession(Base):
     developer_id = Column(Integer, ForeignKey("developers.id"), nullable = False)
     expires_at = Column(DateTime, nullable = False)
     revoked = Column(Boolean, default = False)
-    created_at = Column(DateTime, default = datetime.now(timezone.utc))
+    created_at = Column(DateTime, default = lambda: datetime.now(timezone.utc))
 
