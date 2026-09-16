@@ -55,7 +55,7 @@ function DeveloperLoginForm() {
 
   return (
     <div>
-      <h1>{isSignup ? "Sign up as developer" : "Log in as developer"}</h1>
+      <h1>{isSignup ? "Sign up as Developer" : "Log in as Developer"}</h1>
       {error && <p style={{ color: "red" }}>{error}</p>}
 
       <form onSubmit={handleSubmit}>
