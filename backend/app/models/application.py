@@ -1,11 +1,12 @@
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from datetime import datetime, timezone
 from app.core.database import Base
 
 class Application(Base):
     __tablename__ = "applications"
 
-    id = Column(Integer, primary_key = True, index = True)
+    id = Column(Integer, primary_key = True)
+    developer_id = Column(Integer, ForeignKey("developers.id"), nullable=False)
     name = Column(String, nullable = False)
     client_id = Column(String, unique = True, nullable = False, index = True)
     client_secret_hash = Column(String, nullable = False)
