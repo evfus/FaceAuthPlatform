@@ -18,7 +18,7 @@ function Confirm() {
     if (redirectUrl) params.set("redirect_url", redirectUrl);
     const query = params.toString();
 
-    const res = await fetch(`http://localhost:8000/auth/authorize?${query ? `?${query}` : ""}`,
+    const res = await fetch(`http://localhost:8000/auth/authorize${query ? `?${query}` : ""}`,
       {
         method: "POST",
         credentials: "include"
