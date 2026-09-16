@@ -13,6 +13,9 @@ function Home() {
       </p>
       <button onClick={() => navigate("/login")}>Log In</button>
       <button onClick={() => navigate("/login?mode=signup")}>Sign Up</button>
+      <div>
+        <button onClick={() => navigate("/developer/login")}>Log In as Developer</button>
+      </div>
     </div>
   );
 }
