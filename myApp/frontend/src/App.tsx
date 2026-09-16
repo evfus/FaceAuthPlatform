@@ -38,7 +38,7 @@ function App() {
       client_id: "c992f5979aae354f0fc6de8c76c8d6a3",
       redirect_url: "http://localhost:8001/callback",
     });
-    
+
     window.location.href = `http://localhost:5173/login?${params}`;
   };
 
@@ -52,7 +52,7 @@ function App() {
       ) : (
         <>
           <p>A demo client app using FaceAuth for login.</p>
-          <button onClick={handleLogin}>Login with FaceAuth</button>
+          <button onClick={handleLogin}>Log in with FaceAuth</button>
         </>
       )}
     </div>
