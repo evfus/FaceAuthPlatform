@@ -35,7 +35,7 @@ function App() {
 
   const handleLogin = () => {
     const params = new URLSearchParams({
-      client_id: "c992f5979aae354f0fc6de8c76c8d6a3",
+      client_id: "9a48937911be1f0a2a54946607ab583a",
       redirect_url: "http://localhost:8001/callback",
     });
 
