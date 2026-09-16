@@ -279,6 +279,8 @@ def exchange_token(request: TokenRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code = 400, detail = "Invalid client_id")
 
     if not verify_secret(request.client_secret, application.client_secret_hash):
+        print("SECRET HASH: ", application.client_secret_hash)
+        print("CLIENT SECRET: ", request.client_secret)
         raise HTTPException(status_code = 400, detail = "Invalid client_secret")
 
     if auth_code.application_id != application.id:
@@ -299,6 +301,25 @@ def exchange_token(request: TokenRequest, db: Session = Depends(get_db)):
     db.commit()
 
     return TokenResponse(token = token_value, expires_at = token.expires_at)
+
+@router.get("/userinfo", response_model = UserResponse)
+def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
+    token_value = credentials.credentials
+
+    token = db.query(Token).filter(Token.token == token_value).first()
+
+    if not token:
+        raise HTTPException(status_code = 401, detail = "Invalid token")
+
+    if token.expires_at < utcnow_naive():
+        raise HTTPException(status_code = 401, detail = "Token expired")
+
+    user = db.query(User).filter(User.id == token.user_id).first()
+
+    if not user:
+        raise HTTPException(status_code = 404, detail = "User not found")
+
+    return user
 
 @router.get("/connections")
 def get_connections(
