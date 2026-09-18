@@ -15,7 +15,4 @@ class Settings(BaseSettings):
 
     session_lifetime: timedelta = timedelta(hours = 24)
 
-    class Config:
-        env_file = ".env"
-
 settings = Settings()
