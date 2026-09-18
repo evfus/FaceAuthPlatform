@@ -33,14 +33,22 @@ function App() {
     fetchUser();
   }, []);
 
-  const handleLogin = () => {
+  function handleLogin() {
     const params = new URLSearchParams({
       client_id: "9a48937911be1f0a2a54946607ab583a",
       redirect_url: "http://localhost:8001/callback",
     });
 
     window.location.href = `http://localhost:5173/login?${params}`;
-  };
+  }
+
+  async function handleLogout() {
+    await fetch("http://localhost:8001/logout", {
+      method: "POST",
+      credentials: "include",
+    });
+    window.location.href = `http://localhost:5174/`
+  }
 
   if (loading) return <p>Loading...</p>;
 
@@ -48,7 +56,10 @@ function App() {
     <div>
       <h1>MyApp</h1>
       {user ? (
-        <p>Logged in as {user.email}</p>
+        <div>
+          <p>Logged in as {user.email}</p>
+          <button onClick={handleLogout}>Log out</button>
+        </div>
       ) : (
         <>
           <p>A demo client app using FaceAuth for login.</p>

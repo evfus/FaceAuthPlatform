@@ -1,5 +1,5 @@
 import httpx
-from fastapi import FastAPI, HTTPException, Cookie
+from fastapi import FastAPI, HTTPException, Cookie, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 
@@ -62,3 +62,8 @@ def me(myapp_session: str | None = Cookie(default=None)):
     response.raise_for_status()
     return response.json()
 
+@app.post("/logout")
+def logout(response: Response):
+    response.delete_cookie("myapp_session")
+
+    return {"message": "logged out"}
