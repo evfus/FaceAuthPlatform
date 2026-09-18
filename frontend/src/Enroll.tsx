@@ -84,7 +84,7 @@ function Enroll() {
   }
 
   return (
-    <div>
+    <div className="page">
       <div>
         <h1>Face Enrollment</h1>
         {email && <p>Setting up face login for {email}</p>}

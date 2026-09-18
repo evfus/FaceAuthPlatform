@@ -131,7 +131,7 @@ function DeveloperDashboard() {
   }
 
   return (
-    <div>
+    <div className="page">
       <h1>Developer Dashboard</h1>
       <p>Logged in as {email}</p>
 

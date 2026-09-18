@@ -203,7 +203,7 @@ function LoginForm() {
 
   if (stage === "email") {
     return (
-      <div>
+      <div className="page">
         <h1>{isSignup ? "Sign up" : "Log in"}</h1>
         <form onSubmit={handleEmailSubmit}>
           <input
@@ -228,7 +228,7 @@ function LoginForm() {
 
   if (stage === "password") {
     return (
-      <div>
+      <div className="page">
         <h1>{isSignup ? "Sign up" : "Log in"}</h1>
         {error && <p style={{ color: "red" }}>{error}</p>}
 
@@ -259,7 +259,7 @@ function LoginForm() {
 
   if (stage === "face") {
     return (
-      <div>
+      <div className="page">
         <h1>Face Login</h1>
         {error && <p style={{ color: "red" }}> {error} </p>}
 

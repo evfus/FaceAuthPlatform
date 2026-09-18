@@ -54,7 +54,7 @@ function DeveloperLoginForm() {
   }
 
   return (
-    <div>
+    <div className="page">
       <h1>{isSignup ? "Sign up as Developer" : "Log in as Developer"}</h1>
       {error && <p style={{ color: "red" }}>{error}</p>}
 
@@ -65,18 +65,14 @@ function DeveloperLoginForm() {
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Email address"
         />
-        <div>
+        
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Password"
           />
-        </div>
-
-        <div>
           <button type="submit">{isSignup ? "Sign up" : "Log in"}</button>
-        </div>
       </form>
 
       <button type="button" onClick={() => { setIsSignup(!isSignup); setError(""); }}>

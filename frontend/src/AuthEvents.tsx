@@ -35,7 +35,7 @@ function AuthEvents() {
   }, []);
 
   return (
-    <div>
+    <div className="page">
       <h1>Authentication Events</h1>
       <div>
         <select value={resultFilter} onChange={(e) => setResultFilter(e.target.value)}>

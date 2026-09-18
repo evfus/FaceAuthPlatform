@@ -57,7 +57,7 @@ function Confirm() {
   }
 
   return (
-    <div>
+    <div className="page">
       <div>
         <h1>Continue as {email}?</h1>
       </div>

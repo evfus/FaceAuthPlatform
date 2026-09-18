@@ -4,7 +4,7 @@ function Home() {
   const navigate = useNavigate();
 
   return (
-    <div>
+    <div className="page">
       <h1>FaceAuth</h1>
       <p>
         FaceAuth is a face-authentication identity provider. Apps can let

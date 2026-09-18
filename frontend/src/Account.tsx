@@ -54,7 +54,7 @@ function Account() {
   }
 
   return (
-    <div>
+    <div className="page">
       <h1>Account</h1>
       <p>Email: {email}</p>
       <button onClick={() => navigate(`/enroll?email=${new URLSearchParams({ email: email ?? "" }).toString()}`)}>
